@@ -13,8 +13,8 @@ ifeq "${IGNORE_LOCAL}" "TRUE"
 else
 include Makefile
 # Include makefile containing local settings
-ifeq "$(wildcard nbproject/Makefile-local-PIN-OTG-MX440F256H.mk)" "nbproject/Makefile-local-PIN-OTG-MX440F256H.mk"
-include nbproject/Makefile-local-PIN-OTG-MX440F256H.mk
+ifeq "$(wildcard nbproject/Makefile-local-PIC32-PINGUINO-OTG-PIC32MX440F256H.mk)" "nbproject/Makefile-local-PIC32-PINGUINO-OTG-PIC32MX440F256H.mk"
+include nbproject/Makefile-local-PIC32-PINGUINO-OTG-PIC32MX440F256H.mk
 endif
 endif
 
@@ -25,7 +25,7 @@ MV=mv
 CP=cp 
 
 # Macros
-CND_CONF=PIN-OTG-MX440F256H
+CND_CONF=PIC32-PINGUINO-OTG-PIC32MX440F256H
 ifeq ($(TYPE_IMAGE), DEBUG_RUN)
 IMAGE_TYPE=debug
 OUTPUT_SUFFIX=elf
@@ -45,11 +45,11 @@ OBJECTDIR=build/${CND_CONF}/${IMAGE_TYPE}
 DISTDIR=dist/${CND_CONF}/${IMAGE_TYPE}
 
 # Object Files Quoted if spaced
-OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/megalancontroller.o
-POSSIBLE_DEPFILES=${OBJECTDIR}/megalancontroller.o.d
+OBJECTFILES_QUOTED_IF_SPACED=${OBJECTDIR}/HansunIRController.o
+POSSIBLE_DEPFILES=${OBJECTDIR}/HansunIRController.o.d
 
 # Object Files
-OBJECTFILES=${OBJECTDIR}/megalancontroller.o
+OBJECTFILES=${OBJECTDIR}/HansunIRController.o
 
 
 CFLAGS=
@@ -66,7 +66,7 @@ LDLIBSOPTIONS=
 FIXDEPS=fixDeps
 
 .build-conf:  ${BUILD_SUBPROJECTS}
-	${MAKE}  -f nbproject/Makefile-PIN-OTG-MX440F256H.mk dist/${CND_CONF}/${IMAGE_TYPE}/MegalanRemote.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
+	${MAKE}  -f nbproject/Makefile-PIC32-PINGUINO-OTG-PIC32MX440F256H.mk dist/${CND_CONF}/${IMAGE_TYPE}/MegalanRemote.X.${IMAGE_TYPE}.${OUTPUT_SUFFIX}
 
 MP_PROCESSOR_OPTION=32MX440F256H
 MP_LINKER_FILE_OPTION=
@@ -85,16 +85,16 @@ endif
 # ------------------------------------------------------------------------------------
 # Rules for buildStep: compile
 ifeq ($(TYPE_IMAGE), DEBUG_RUN)
-${OBJECTDIR}/megalancontroller.o: megalancontroller.c  nbproject/Makefile-${CND_CONF}.mk
+${OBJECTDIR}/HansunIRController.o: HansunIRController.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} ${OBJECTDIR} 
-	@${RM} ${OBJECTDIR}/megalancontroller.o.d 
-	@${FIXDEPS} "${OBJECTDIR}/megalancontroller.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION) -I"../../" -MMD -MF "${OBJECTDIR}/megalancontroller.o.d" -o ${OBJECTDIR}/megalancontroller.o megalancontroller.c   
+	@${RM} ${OBJECTDIR}/HansunIRController.o.d 
+	@${FIXDEPS} "${OBJECTDIR}/HansunIRController.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE) -g -D__DEBUG -D__MPLAB_DEBUGGER_PK3=1 -fframe-base-loclist  -x c -c -mprocessor=$(MP_PROCESSOR_OPTION) -I"../../" -MMD -MF "${OBJECTDIR}/HansunIRController.o.d" -o ${OBJECTDIR}/HansunIRController.o HansunIRController.c   
 	
 else
-${OBJECTDIR}/megalancontroller.o: megalancontroller.c  nbproject/Makefile-${CND_CONF}.mk
+${OBJECTDIR}/HansunIRController.o: HansunIRController.c  nbproject/Makefile-${CND_CONF}.mk
 	@${MKDIR} ${OBJECTDIR} 
-	@${RM} ${OBJECTDIR}/megalancontroller.o.d 
-	@${FIXDEPS} "${OBJECTDIR}/megalancontroller.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION) -I"../../" -MMD -MF "${OBJECTDIR}/megalancontroller.o.d" -o ${OBJECTDIR}/megalancontroller.o megalancontroller.c   
+	@${RM} ${OBJECTDIR}/HansunIRController.o.d 
+	@${FIXDEPS} "${OBJECTDIR}/HansunIRController.o.d" $(SILENT) -rsi ${MP_CC_DIR}../  -c ${MP_CC}  $(MP_EXTRA_CC_PRE)  -g -x c -c -mprocessor=$(MP_PROCESSOR_OPTION) -I"../../" -MMD -MF "${OBJECTDIR}/HansunIRController.o.d" -o ${OBJECTDIR}/HansunIRController.o HansunIRController.c   
 	
 endif
 
@@ -128,8 +128,8 @@ endif
 
 # Clean Targets
 .clean-conf: ${CLEAN_SUBPROJECTS}
-	${RM} -r build/PIN-OTG-MX440F256H
-	${RM} -r dist/PIN-OTG-MX440F256H
+	${RM} -r build/PIC32-PINGUINO-OTG-PIC32MX440F256H
+	${RM} -r dist/PIC32-PINGUINO-OTG-PIC32MX440F256H
 
 # Enable dependency checking
 .dep.inc: .depcheck-impl

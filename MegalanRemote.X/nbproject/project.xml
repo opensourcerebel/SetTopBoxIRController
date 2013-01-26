@@ -3,7 +3,7 @@
     <type>com.microchip.mplab.nbide.embedded.makeproject</type>
     <configuration>
         <data xmlns="http://www.netbeans.org/ns/make-project/1">
-            <name>MegalanRemote</name>
+            <name>SetTopBoxIRController</name>
             <creation-uuid>9730d1b1-d0cd-4096-a960-a4262ab6e40d</creation-uuid>
             <make-project-type>0</make-project-type>
             <c-extensions>c</c-extensions>

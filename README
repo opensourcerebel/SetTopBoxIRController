@@ -6,3 +6,26 @@ To do that it has:
 - 220V relay control
 - 12V transistor control for the STB power and 220V relay control power
 - Current consumption measurement to know when the hansun is working and when in IDLE
+To compile and use one needs software:
+- MPLABX IDE from Microchip
+- X32 Compiler from Microchip 
+To compile and use one needs hardware:
+- Michrochip PICKit3 to program the Olimex Hardware
+Additional hardware:
+https://www.olimex.com/Products/Duino/PIC32/PIC32-PINGUINO-OTG/	Pinguino-otg
+https://www.olimex.com/Products/Duino/Shields/PROTO-SHIELD/	protoshield
+http://store.comet.bg/bg/Catalogue/Product/7509/	patch for pinguino
+http://store.comet.bg/bg/Catalogue/Product/9567/	irf4905
+http://store.comet.bg/bg/Catalogue/Product/20980/	bc549c
+http://store.comet.bg/bg/Catalogue/Product/25433/	DTC114YKA
+http://store.comet.bg/bg/Catalogue/Product/20904/	L-53F3BT
+http://store.comet.bg/bg/Catalogue/Product/6489/	RPM7140
+http://store.comet.bg/bg/CatalogueFarnell/Product/988880/	ZXCT1009F
+http://store.comet.bg/bg/Catalogue/Product/3503/	51 R 0805
+http://store.comet.bg/bg/Catalogue/Product/29754/	1K R 0805
+http://store.comet.bg/bg/Catalogue/Product/3516/	220 R 0805
+http://store.comet.bg/bg/Catalogue/Product/7562/	0,1 R 0805
+http://store.comet.bg/bg/Catalogue/Product/3970/	букса
+http://dx.com/p/2-channel-12v-high-level-trigger-relay-module-for-arduino-153966	Relay
+http://www.tpetrov.com/search.php?prod=RAZ-3+%D0%A0%D0%90%D0%97%D0%9A%D0%9B%D0%9E%D0%9D%D0%98%D0%A2%D0%95%D0%9B	Разклонител
+http://dx.com/p/pyroelectric-infrared-pir-motion-sensor-detector-module-157004	PIR sensor
