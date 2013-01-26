@@ -1,7 +1,7 @@
-PIC32MX44F256H used to control Hansun HS6020 Set Top Box using the factory remote (helps NOT voiding the warranty) and in the same time stop the STB becasue it has 7W standby current consumption!
+﻿PIC32MX44F256H used to control Hansun HS6020 Set Top Box using the factory remote (helps NOT voiding the warranty) and in the same time stop the STB because it has 7W standby consumption (65KW per year)!
 To do that it has:
 - PIR to sense human movement so that the the STB can be preliminary started and auto shutdown when there is no movement and the user is not watching TV
-- IR reveiced to read IR commands from Hansun IR
+- IR received to read IR commands from Hansun IR
 - IR transmitter to send IR commands to the Hansun
 - 220V relay control
 - 12V transistor control for the STB power and 220V relay control power
