@@ -98,12 +98,23 @@ BOOL sendingIR = 0;
 #define	IR_CMD_AUTO_PRG_UP	10965
 #define	IR_CMD_AUTO_PRG_DOWN    59925
 
+#define IR_HDR_LED 0b0000000011110111
+#define	IR_CMD_PLAY      61965
+#define	IR_CMD_STOP      29325
+#define	IR_CMD_FWD_LEFT  45645
+#define	IR_CMD_FWD_RIGHT 13005
+
+#define	IR_CMD_LED_ON     49215
+#define	IR_CMD_LED_OFF    16575
+#define	IR_CMD_LED_CLR1   57375
+#define	IR_CMD_LED_CLR2   4335
+
 #define	IR_CMD_PRG_UP	63495
 #define	IR_CMD_PRG_DOWN	15045
 
 
 #define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
-#define MAX_DUTY               2221
+#define MAX_DUTY               2001
 
 volatile BOOL STBRunning = FALSE;
 
@@ -196,9 +207,9 @@ void switchMonitorOn()
     mPORTBSetBits(BIT_14);
 }
 
-BOOL checkIRCommand(int cmd)
+BOOL checkIRCommand(int cmd, int hdr)
 {
-    if (commandByte == cmd && headerByte == IR_HDR_HANSUN)
+    if (commandByte == cmd && headerByte == hdr)
     {
         return TRUE;
     }
@@ -208,17 +219,37 @@ BOOL checkIRCommand(int cmd)
 
 BOOL upAutoSent()
 {
-    return checkIRCommand(IR_CMD_AUTO_PRG_UP);
+    return checkIRCommand(IR_CMD_AUTO_PRG_UP, IR_HDR_HANSUN);
 }
 
 BOOL downAutoSent()
 {
-    return checkIRCommand(IR_CMD_AUTO_PRG_DOWN);
+    return checkIRCommand(IR_CMD_AUTO_PRG_DOWN, IR_HDR_HANSUN);
+}
+
+BOOL ledOnSent()
+{
+    return checkIRCommand(IR_CMD_PLAY, IR_HDR_HANSUN);
+}
+
+BOOL ledOffSent()
+{
+    return checkIRCommand(IR_CMD_STOP, IR_HDR_HANSUN);
+}
+
+BOOL ledFWDLeftSent()
+{
+    return checkIRCommand(IR_CMD_FWD_LEFT, IR_HDR_HANSUN);
+}
+
+BOOL ledFWDRightSent()
+{
+    return checkIRCommand(IR_CMD_FWD_RIGHT, IR_HDR_HANSUN);
 }
 
 BOOL offCommandSent()
 {
-    return checkIRCommand(IR_CMD_OFF);
+    return checkIRCommand(IR_CMD_OFF, IR_HDR_HANSUN);
 }
 
 void processIRSignal()
@@ -481,11 +512,12 @@ void setupCNModuleAnd_IR_PIR_Input()
 
     // setup the change notice options
     //(ensure that CN continues working in sleep mode)
-    mCNOpen(CN_OFF | CN_IDLE_CON, CN16_ENABLE | CN4_ENABLE, CN16_PULLUP_ENABLE | CN4_PULLUP_ENABLE);
+    mCNOpen(CN_OFF | CN_IDLE_CON, CN16_ENABLE | CN4_ENABLE | CN13_ENABLE, CN16_PULLUP_ENABLE | CN4_PULLUP_ENABLE);
 
     // read port(s) to clear mismatch
     mPORTDReadBits(BIT_7);
     mPORTBReadBits(BIT_2);
+    mPORTBReadBits(BIT_4);
 
     // configure interrupts and clear change notice interrupt flag
     ConfigIntCN(CHANGE_INT_ON | CHANGE_INT_PRI_3);
@@ -539,6 +571,31 @@ void gotoSLEEP()
     prepareTimer2AfterWake();
 }
 
+void fillHeaderBuffer(unsigned int value)
+{
+    //0101000010101111
+    int i = 3;
+    int bitIdx = 15;
+    //printf("hdr cmd:\r\n");
+    for (; i < 34; i = i + 2)
+    {
+        if (CHECK_BIT(value, bitIdx))
+        {
+            //printf("1");
+            irTransmitBuffer[i] = ONE;
+        }
+        else
+        {
+            //printf("0");
+            irTransmitBuffer[i] = ZERO;
+        }
+
+        bitIdx--;
+        irTransmitBuffer[i + 1] = TERMINATOR;
+    }
+    //printf("\r\n");
+}
+
 void prepareIRTransmitBuffer()
 {
     //signal preparation - emmit
@@ -550,20 +607,7 @@ void prepareIRTransmitBuffer()
 
     int i = 3;
     //signal address
-    for (; i < 18; i = i + 2)
-    {
-        irTransmitBuffer[i] = ZERO;
-        irTransmitBuffer[i + 1] = TERMINATOR;
-    }
-
-    i = 19;
-    for (; i < 32; i = i + 2)
-    {
-        irTransmitBuffer[i] = ONE;
-        irTransmitBuffer[i + 1] = TERMINATOR;
-    }
-    irTransmitBuffer[33] = ZERO;
-    irTransmitBuffer[34] = TERMINATOR;
+    fillHeaderBuffer(IR_HDR_HANSUN);
 
     //signal data
     i = 35;
@@ -611,10 +655,11 @@ void setupPWMForIR()
     // init OC3 module
     OpenOC3(OC_OFF | OC_TIMER3_SRC | OC_PWM_FAULT_PIN_DISABLE, 0, 0);
 
-    // init Timer5 mode and period (PR2) 20 kHz freq ( 1 / 20 kHz = (3999 + 1) / 80MHz * 1
+    // init Timer3 mode and period (PR2) 40 kHz freq: 1 / 40 kHz = (X + 1) / 80MHz * 1
     //80 000 / 20 = X + 1 = 3999
     //80 000 / 38 = X + 1 = 2104
     //80 000 / 36 = X + 1 = 2221
+    //80 000 / 40 = X + 1 = 2001
     OpenTimer3(T3_ON | T3_PS_1_1 | T3_SOURCE_INT, MAX_DUTY);
 
     SetDCOC3PWM(PR3 / 2);
@@ -730,7 +775,7 @@ void setupCNModuleAndPIRInput()
     mCNClearIntFlag(); // Clear interrupt flag
 }
 
-static volatile int rtcAlarm = 0; // ISR
+static volatile int rtcAlarm = FALSE; // ISR
 
 void configureRTC()
 {
@@ -758,7 +803,7 @@ void configureRTC()
     //RtccSetAlarmRptCount(0);
     //the above means once we have alarm interrupt the alarm will be disabled
 
-    // cannot be disabled so we choose a bigger enought value
+    // used for marching (i.e. window) when cpmparing
     RtccSetAlarmRpt(RTCC_RPT_MON);
 }
 
@@ -773,7 +818,7 @@ void setupHardware()
     //A2 STB current consumption (AN3)
     //D0 IR Output
     mPORTDSetPinsDigitalOut(BIT_3); //D1 STB IRF control
-    //D2 BUT OTG
+    mPORTDSetPinsDigitalIn(BIT_4); //D2 BUT OTG
     mPORTDSetPinsDigitalOut(BIT_5); //D3 SHD RED LED Command OFF acqusition notificaiton
     mPORTDSetPinsDigitalOut(BIT_6); //D4 SHD GREEN LED Command ON acqusition notificaiton
     //D5 IR input
@@ -1077,6 +1122,46 @@ void pumpDownCommand()
     setupAutoIRAlarm();
 }
 
+void pumpLEDOnCommand()
+{
+    delayMs(200);
+
+    fillHeaderBuffer(IR_HDR_LED);
+    fillCommandBuffer(IR_CMD_LED_ON);
+    sendIRCommandBlocking();
+    fillHeaderBuffer(IR_HDR_HANSUN);
+}
+
+void pumpLEDClr1Command()
+{
+    delayMs(200);
+
+    fillHeaderBuffer(IR_HDR_LED);
+    fillCommandBuffer(IR_CMD_LED_CLR1);
+    sendIRCommandBlocking();
+    fillHeaderBuffer(IR_HDR_HANSUN);
+}
+
+void pumpLEDClr2Command()
+{
+    delayMs(200);
+
+    fillHeaderBuffer(IR_HDR_LED);
+    fillCommandBuffer(IR_CMD_LED_CLR2);
+    sendIRCommandBlocking();
+    fillHeaderBuffer(IR_HDR_HANSUN);
+}
+
+void pumpLEDOffCommand()
+{
+    delayMs(200);
+
+    fillHeaderBuffer(IR_HDR_LED);
+    fillCommandBuffer(IR_CMD_LED_OFF);
+    sendIRCommandBlocking();
+    fillHeaderBuffer(IR_HDR_HANSUN);
+}
+
 void initiateAutoUp()
 {
     stopRTCAlarm();
@@ -1169,6 +1254,26 @@ void handleIR()
     else if (downAutoSent() && STBRunning)
     {
         initiateAutoDown();
+    }
+    else if (ledOnSent())
+    {
+        stopRTCAlarm();
+        pumpLEDOnCommand();
+    }
+    else if (ledOffSent())
+    {
+        stopRTCAlarm();
+        pumpLEDOffCommand();
+    }
+    else if (ledFWDLeftSent())
+    {
+        stopRTCAlarm();
+        pumpLEDClr1Command();
+    }
+    else if (ledFWDRightSent())
+    {
+        stopRTCAlarm();
+        pumpLEDClr2Command();
     }
     else
     {
@@ -1273,6 +1378,7 @@ int main(void)
     initializeVariables();
     //wait pir to stabilize
     delayMs(1000);
+    
 
     while (1)
     {
