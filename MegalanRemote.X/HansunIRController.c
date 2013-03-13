@@ -8,7 +8,6 @@
 // PBCLK = 80 MHz
 // WDT OFF
 #ifndef OVERRIDE_CONFIG_BITS
-
 #pragma config UPLLEN   = ON        // USB PLL Enabled
 #pragma config UPLLIDIV = DIV_2         // USB PLL Input Divider
 
@@ -116,11 +115,10 @@ BOOL sendingIR = 0;
 #define CHECK_BIT(var,pos) ((var) & (1<<(pos)))
 #define MAX_DUTY               2001
 
-volatile BOOL STBRunning = FALSE;
+volatile BOOL stbTVRunning = FALSE;
 
 volatile BOOL pirActive = FALSE;
 volatile BOOL stbActive = FALSE;
-volatile BOOL doMissingMovementCheck = FALSE;
 volatile BOOL stbActivationInProgress = FALSE;
 volatile BOOL upCommandActive = FALSE;
 volatile BOOL downCommandActive = FALSE;
@@ -506,13 +504,13 @@ void setupCNModuleAnd_IR_PIR_Input()
     setupTimer2();
 
     //IR INPUT
-    mPORTDSetPinsDigitalIn(BIT_7); //pin26 (T795), D5 (OTG)
+    mPORTDSetPinsDigitalIn(BIT_7); //D5 IR Input (CN16 module, RD7)
     //PIR input
-    mPORTBSetPinsDigitalIn(BIT_2); //A1 PIR Input (CN4 module)
+    mPORTBSetPinsDigitalIn(BIT_2); //A1 PIR Input (CN4 module, RB2)
 
     // setup the change notice options
     //(ensure that CN continues working in sleep mode)
-    mCNOpen(CN_OFF | CN_IDLE_CON, CN16_ENABLE | CN4_ENABLE | CN13_ENABLE, CN16_PULLUP_ENABLE | CN4_PULLUP_ENABLE);
+    mCNOpen(CN_OFF | CN_IDLE_CON, CN16_ENABLE | CN4_ENABLE, CN16_PULLUP_ENABLE | CN4_PULLUP_ENABLE);
 
     // read port(s) to clear mismatch
     mPORTDReadBits(BIT_7);
@@ -524,16 +522,23 @@ void setupCNModuleAnd_IR_PIR_Input()
     mCNClearIntFlag(); // Clear interrupt flag
 }
 
-void enableCNModule()
+void enableCNModule(int userIsWatchingTV)
 {
-    CNCONSET = 0b1000000000000000;
+    if(userIsWatchingTV)
+    {
+        //do not enable PIR input during TV operation it is useless
+        mCNOpen(CN_ON | CN_IDLE_CON, CN16_ENABLE, CN16_PULLUP_ENABLE | CN4_PULLUP_ENABLE);
+    }
+    else
+    {
+        mCNOpen(CN_ON | CN_IDLE_CON, CN16_ENABLE | CN4_ENABLE, CN16_PULLUP_ENABLE | CN4_PULLUP_ENABLE);
+    }
     mCNIntEnable(1);
 }
 
 void disableCNModule()
 {
-    CNCONCLR = 0b1000000000000000;
-    mCNIntEnable(0);
+    mCNClose();
 }
 
 void prepareTimer2AfterWake()
@@ -551,19 +556,12 @@ void gotoSLEEP()
         return;
     }
 
-    if (doMissingMovementCheck)
-    {
-        printf("Ignore sleep, have missing movement to check\r\n");
-        doMissingMovementCheck = FALSE;
-        return;
-    }
-
 
     printf("Sleep\r\n");
     delayMs(20);
 
     T2CONbits.ON = 0;
-    enableCNModule();
+    enableCNModule(stbTVRunning);
 
     PowerSaveSleep();
     disableCNModule();
@@ -775,7 +773,7 @@ void setupCNModuleAndPIRInput()
     mCNClearIntFlag(); // Clear interrupt flag
 }
 
-static volatile int rtcAlarm = FALSE; // ISR
+static volatile int rtcAlarm = 0; // ISR
 
 void configureRTC()
 {
@@ -814,14 +812,14 @@ void setupHardware()
     mPORTDSetPinsDigitalOut(BIT_1); //yellow LED
     mPORTGSetPinsDigitalOut(BIT_6); //green LED
 
-    //A1 PIR Input (CN4 module)
+    //A1 PIR Input (CN4 module, RB2)
     //A2 STB current consumption (AN3)
     //D0 IR Output
     mPORTDSetPinsDigitalOut(BIT_3); //D1 STB IRF control
     mPORTDSetPinsDigitalIn(BIT_4); //D2 BUT OTG
     mPORTDSetPinsDigitalOut(BIT_5); //D3 SHD RED LED Command OFF acqusition notificaiton
     mPORTDSetPinsDigitalOut(BIT_6); //D4 SHD GREEN LED Command ON acqusition notificaiton
-    //D5 IR input
+    //D5 IR input (RD7)
     //D6 SHD BUT1
     //D7 SHD BUT2
     mPORTBSetPinsDigitalOut(BIT_14); //D9 monitor relay control
@@ -856,6 +854,7 @@ void activateSTB()
 {
     if (stbActive)
     {
+        printf("STB already active\r\n");
         return;
     }
 
@@ -879,16 +878,15 @@ void activateSTB()
     notifyOnCommandProcessed();
 
     stbActive = TRUE;
-    doMissingMovementCheck = TRUE;
 }
 
 void deactivateSTB()
 {
     //mPORTGClearBits(BIT_6); //green LED OFF
     stopRTCAlarm();
-    if (STBRunning)
+    if (stbTVRunning)
     {
-        printf("Ignore STB Deactivation!");
+        printf("Ignore STB Deactivation!\r\n");
         return;
     }
 
@@ -926,7 +924,7 @@ void makeSTBRun()
         while (!waitForSTBToStart(2));
     }
 
-    STBRunning = 1;
+    stbTVRunning = 1;
 }
 
 void notifySwitchOffTimeout()
@@ -954,7 +952,7 @@ void makeSTBStop()
     switchSTBOff();
     //make sure STB is really off
     delayMs(1000);
-    STBRunning = 0;
+    stbTVRunning = 0;
     stbActive = 0;
 }
 
@@ -967,7 +965,7 @@ BOOL checkPIR()
 void initializeVariables()
 {
     processIRCommand = 0;
-    STBRunning = FALSE;
+    stbTVRunning = 0;
 
     prepareIRTransmitBuffer();
     //fillCommandBuffer(20655);
@@ -975,7 +973,6 @@ void initializeVariables()
 
     stbActive = FALSE;
     pirActive = checkPIR();
-    doMissingMovementCheck = FALSE;
     stbActivationInProgress = FALSE;
     upCommandActive = FALSE;
     downCommandActive = FALSE;
@@ -989,19 +986,9 @@ void readCNAndClrIsr()
     mCNClearIntFlag();
 }
 
-void movementActive()
-{
-    //mPORTDSetBits(BIT_1); //yellow LED ON
-    if(STBRunning)
-    {
-        printf("Will not stop RTC movement alarm\r\n");
-        return;
-    }
-    stopRTCAlarm();
-}
-
 void setupOffAlarm()
 {
+    printf("setupOffAlarm\r\n");
     //mPORTDClearBits(BIT_1); //yellow LED
 
     rtccTime tm, tAlrm; // time structure
@@ -1027,6 +1014,7 @@ void setupOffAlarm()
 
 void setupAutoIRAlarm()
 {
+    printf("setupAutoIRAlarm\r\n");
     //mPORTDClearBits(BIT_1); //yellow LED
 
     rtccTime tm, tAlrm; // time structure
@@ -1088,7 +1076,15 @@ void handleMovement()
 {
     printf("Movement\r\n");
     pirActive = TRUE;
-    movementActive();
+    if(stbActive && !stbTVRunning)
+    {
+        //STB is active, but TV is not running - diable the RTC
+        //we want to disable RTC only in this case if we  process it
+        //during stbTVRunning then we might stop auto IR signals
+        //when there is a movement
+        //okay, disable RTC off comamnds
+        stopRTCAlarm();
+    }
     activateSTB();
 }
 
@@ -1097,13 +1093,22 @@ void handleMovementMissing()
     printf("No Movement\r\n");
     pirActive = FALSE;
 
-    if (STBRunning)
+    if (stbTVRunning)
     {
-        printf("Will not setup RTC shut down alarm\r\n");
+        //the TV is running, do not prepare a trigger to stop the STB!
+        printf("Ingore STB shut off request via PIR\r\n");
         return;
     }
 
-    setupOffAlarm();
+    if (stbActive)
+    {
+        stopRTCAlarm();
+        setupOffAlarm();
+    }
+    else
+    {
+        printf("No need for STB auto off\r\n");
+    }
 }
 
 void pumpUpCommand()
@@ -1203,7 +1208,7 @@ void initiateAutoDown()
 void handleRTC()
 {
     printf("RTC Alarm\r\n");
-    if (!STBRunning)
+    if (!stbTVRunning)
     {
         printf("OFF\r\n");
         deactivateSTB();
@@ -1238,8 +1243,10 @@ void handleIR()
         printf("OFF IR Receied\r\n");
         //T2CONbits.ON = 0;
 
-        if (!STBRunning)
+        if (!stbTVRunning)
         {
+            //first disable any pending RTC off alarms
+            stopRTCAlarm();
             initiateStartup();
         }
         else
@@ -1247,11 +1254,11 @@ void handleIR()
             initiateStop();
         }
     }
-    else if (upAutoSent() && STBRunning)
+    else if (upAutoSent() && stbTVRunning)
     {
         initiateAutoUp();
     }
-    else if (downAutoSent() && STBRunning)
+    else if (downAutoSent() && stbTVRunning)
     {
         initiateAutoDown();
     }
@@ -1362,7 +1369,7 @@ void __ISR(_RTCC_VECTOR, ipl5) RtccIsr(void)
     // once we get in the RTCC ISR we have to clear the RTCC int flag
     INTClearFlag(INT_RTCC);
 
-    rtcAlarm = TRUE; // show we're progressing somehow...
+    rtcAlarm = 1; // show we're progressing somehow...
     //no need to call this
     //chmie 0 and alarm 0 => it will be automatically disabled!
     //RtccAlarmDisable();
@@ -1373,7 +1380,7 @@ int main(void)
 {
     setupHardware();
     printf("\r\n++++++++++++++++++++++\r\n");
-    printf("Megalan Controller 2.1\r\n");
+    printf("Megalan Controller 2.3\r\n");
     printf("++++++++++++++++++++++\r\n");
     initializeVariables();
     //wait pir to stabilize
@@ -1407,6 +1414,6 @@ int main(void)
         //wait a bit
         //otherwise we may put the device
         //to sleep while it is receiving commands!
-        delayMs(200);
+        delayMs(500);
     }
 }
